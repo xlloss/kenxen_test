@@ -1,0 +1,151 @@
+LED_ON()
+{
+    echo "GPIO:"$1
+    echo 1 > /sys/class/gpio/gpio$1/value
+}
+
+LED_OFF()
+{
+    echo 0 > /sys/class/gpio/gpio$1/value
+}
+
+LED_ERR_PATTEN()
+{
+    LED_NUM=$1
+
+    LED_OFF 73
+    LED_OFF 74
+    LED_OFF 75
+    LED_OFF 76
+    LED_OFF 77
+
+    LED_ON LED_NUM
+}
+
+LED_CLR_PATTEN()
+{
+    LED_OFF 73
+    LED_OFF 74
+    LED_OFF 75
+    LED_OFF 76
+    LED_OFF 77
+}
+
+LED_CHK_PATTEN()
+{
+    LED_ON 73
+    LED_ON 74
+    LED_ON 75
+    LED_ON 76
+    LED_ON 77
+}
+
+ITEM_TEST_FUNC_INIT()
+{
+    echo "INIT"
+}
+
+ITEM_TEST_FUNC_GPIO()
+{
+    echo "ITEM_TEST_FUNC_GPIO Doing ..."
+    GPIO_TEST=$(common/bin_tool/kenxen_test_gpio_sysfs)
+    RESULT=$(echo ${GPIO_TEST} | grep -i "fail")
+
+    if [ -z ${RESULT} ]; then
+        echo "GPIO TEST OK"
+    else
+        echo "GPIO TEST FAIL"
+    fi
+}
+
+ITEM_TEST_FUNC_SDCARD()
+{
+    modprobe mmc_core;
+    modprobe mmc_block;
+    modprobe ambarella_sd
+
+    RESULT=$(ls /sdcard/mmcblk0p1/)
+    if [ -z ${RESULT} ];then
+        echo "SDCARD:FAIL"
+    else
+        echo "SDCARD:OK"
+    fi
+}
+
+ITEM_TEST_FUNC_ETH()
+{
+    echo "ITEM_TEST_FUNC_ETH Doing ..."
+    #modprobe icplus
+    #modprobe ambarella_eth
+    #ifconfig eth0 10.0.1.250
+    ifconfig eth0
+    ping -I eth0 10.0.1.1 -c 3
+}
+
+ITEM_TEST_FUNC_ADC()
+{
+    echo "ITEM_TEST_FUNC_ETH Doing ..."
+    ADC1=$(cat /sys/bus/iio/devices/iio:device0/in_voltage1_raw)
+    ADC2=$(cat /sys/bus/iio/devices/iio:device0/in_voltage2_raw)
+
+    if [ -z ${ADC1} ];then
+        echo "ADC1:FAIL"
+    else
+        echo "ADC1:OK"
+    fi
+
+    if [ -z ${ADC2} ];then
+        echo "ADC2:FAIL"
+    else
+        echo "ADC2:OK"
+    fi
+}
+
+ITEM_TEST_FUNC_SENSOR()
+{
+    echo "ITEM_TEST_FUNC_SENSOR Doing ..."
+    RTSPIP=$(ifconfig eth0  | grep "inet addr" | awk -F ":" '{print $2}' | awk -F " " '{print $1}')
+
+    init.sh; modprobe jx_f32_mipi
+    test_aaa_service -a &
+    test_encode --resource-cfg /usr/local/bin/scripts/cv28_vin0_1080p_linear.lua
+    rtsp_server &
+    test_encode -A -h1080p -e
+}
+
+ITEM_TEST_FUNC_AUTO()
+{
+    echo "ITEM_TEST_FUNC_AUTO Doing ..."
+    x=1
+    while [ $x -le 3 ]
+    do
+        #echo "Welcome $x times"
+        ITEM_FUNCTION_NAME=`echo ${TEST_MENU_LIST} | cut -d" " -f ${x}`
+        FUNCTION_NAME=`echo $ITEM_FUNCTION_NAME | awk -F "_" '{print $4}'`
+
+        echo "ITEM_FUNCTION_NAME:"${ITEM_FUNCTION_NAME}
+        echo "FUNCTION_NAME:"${FUNCTION_NAME}
+        ITEM_TEST_FUNC_${FUNCTION_NAME}
+
+        x=$(( $x + 1 ))
+    done
+}
+
+function Show_Menu_All()
+{
+    set -- $TEST_MENU_LIST
+    while [ -n "$1" ]; do
+        echo $1
+        shift
+    done
+}
+
+function Choice_Test_Funtion()
+{
+    echo "Choice_Test_Funtion"
+    if [[ -z ${1} ]]; then
+        read -p "Choice:" FUNCTION_NUM
+    else
+        FUNCTION_NUM=${1}
+    fi
+}
