@@ -40,6 +40,12 @@ LED_CHK_PATTEN()
     LED_ON 77
 }
 
+ITEM_TEST_FUNC_EXIT()
+{
+    echo "ITEM_TEST_FUNC_EXIT Doing ..."
+    exit 0
+}
+
 ITEM_TEST_FUNC_INIT()
 {
     echo "INIT"
@@ -70,6 +76,19 @@ ITEM_TEST_FUNC_SDCARD()
     else
         echo "SDCARD:OK"
     fi
+
+    while [ -z ${RESULT} ]
+    do
+        if [ -z ${RESULT} ];then
+            echo "SDCARD:FAIL"
+        else
+            echo "SDCARD:OK"
+        fi
+        sleep 1
+        RESULT=$(ls /sdcard/mmcblk0p1/)
+    done
+
+    dd if=/dev/mmcblk0 of=/dev/zero bs=1M count=99999 &
 }
 
 ITEM_TEST_FUNC_ETH()
@@ -77,9 +96,18 @@ ITEM_TEST_FUNC_ETH()
     echo "ITEM_TEST_FUNC_ETH Doing ..."
     #modprobe icplus
     #modprobe ambarella_eth
-    #ifconfig eth0 10.0.1.250
     ifconfig eth0
-    ping -I eth0 10.0.1.1 -c 3
+    ifconfig eth0 | grep "net addr" | awk -F " " '{print $2}' | awk -F ":" '{print $2}'
+    IPADDR_TMP1=$(ifconfig eth0 | grep "net addr")
+    IPADDR_TMP2=$(echo ${IPADDR_TMP1} | awk -F " " '{print $2}')
+    IPADDR=$(echo ${IPADDR_TMP2} | awk -F ":" '{print $2}')
+
+    ping -I eth0 8.8.8.8 -c 3
+
+    echo "==================================================="
+    echo "=                RTSP  SERVER IP                  ="
+    echo "=                rtsp://${IPADDR}/stream1         ="
+    echo "==================================================="
 }
 
 ITEM_TEST_FUNC_ADC()
@@ -106,21 +134,31 @@ ITEM_TEST_FUNC_SENSOR()
     echo "ITEM_TEST_FUNC_SENSOR Doing ..."
     RTSPIP=$(ifconfig eth0  | grep "inet addr" | awk -F ":" '{print $2}' | awk -F " " '{print $1}')
 
-    init.sh; modprobe jx_f32_mipi
-    test_aaa_service -a &
-    test_encode --resource-cfg /usr/local/bin/scripts/cv28_vin0_1080p_linear.lua
-    rtsp_server &
-    test_encode -A -h1080p -e
+    /usr/local/bin/init.sh; modprobe jx_f32_mipi
+    /usr/local/bin/test_aaa_service -a &
+    /usr/local/bin/test_encode --resource-cfg /usr/local/bin/scripts/cv28_vin0_1080p_linear.lua
+    /usr/local/bin/rtsp_server &
+    /usr/local/bin/test_encode -A -h1080p -e
+}
+
+ITEM_TEST_FUNC_STRESSTEST()
+{
+    echo "ITEM_TEST_FUNC_STRESSTEST Doing ..."
+
+    #common/bin_tool/stressapptest -s 3600 -M 8 -m 4 &
+    /usr/local/bin/nbench &
+    sleep 1;
+    /usr/local/bin/nbench &
 }
 
 ITEM_TEST_FUNC_AUTO()
 {
     echo "ITEM_TEST_FUNC_AUTO Doing ..."
     x=1
-    while [ $x -le 3 ]
+    while [ $x -le ${AUTO_TEST_NUM} ]
     do
         #echo "Welcome $x times"
-        ITEM_FUNCTION_NAME=`echo ${TEST_MENU_LIST} | cut -d" " -f ${x}`
+        ITEM_FUNCTION_NAME=`echo ${AUTOTEST_MENU_LIST} | cut -d" " -f ${x}`
         FUNCTION_NAME=`echo $ITEM_FUNCTION_NAME | awk -F "_" '{print $4}'`
 
         echo "ITEM_FUNCTION_NAME:"${ITEM_FUNCTION_NAME}

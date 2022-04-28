@@ -1,11 +1,7 @@
 #!/bin/bash
 
 TEST_MENU_VERSION=1.0
-FUNCTION_NUM=0
-TEST_MENU_LIST_ARRAY_NUM=0
-ABOVE_TESTITEMS_ARRAY_NUM=0
 TEST_TIME_DAY=`date +%m%d%H%M`
-TEST_RESULT="test_${TEST_TIME_DAY}.txt"
 BOARD_NAME=`echo ${1} | awk -F ".cfg" '{print $1}'`
 
 #echo "Test Board" ${BOARD_NAME}
@@ -31,4 +27,4 @@ do
     echo -e "\n"
 done
 
-#ITEM_TEST_FUNC_AUTO
+ITEM_TEST_FUNC_AUTO
